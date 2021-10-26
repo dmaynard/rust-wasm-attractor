@@ -1,14 +1,14 @@
 {
     "workbench.colorCustomizations": {
     // The background is optional
-    "terminal.background": "#382a36",
+    "terminal.background": "#422a36",
     "terminal.foreground": "#eff0eb",
     "terminal.ansiBlack": "#282a36",
     "terminal.ansiRed": "#ff5c57",
     "terminal.ansiGreen": "#5af78e",
     "terminal.ansiYellow": "#f3f99d",
     "terminal.ansiBlue": "#57c7ff",
-    "terminal.ansiMagenta": "#ff6ac1",
+    "terminal.ansiMagenta": "#6d3254",
     "terminal.ansiCyan": "#9aedfe",
     "terminal.ansiWhite": "#f1f1f0",
     "terminal.ansiBrightBlack": "#686868",

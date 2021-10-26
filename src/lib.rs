@@ -14,6 +14,11 @@ extern {
 }
 
 #[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, rust-wasm-attractor!");
+pub fn greet(name: &str) {
+    alert(&format!("Hello, {} ", name));
+}
+
+#[wasm_bindgen]
+pub fn double (num: i32) -> i32 {
+    return num+num;
 }
