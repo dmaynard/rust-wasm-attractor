@@ -22,3 +22,23 @@ pub fn greet(name: &str) {
 pub fn double (num: i32) -> i32 {
     return num+num;
 }
+#[wasm_bindgen]
+pub fn triple (num: i32) -> i32 {
+    return num+num+num;
+}
+
+#[wasm_bindgen]
+pub fn fibonacci(n: u32) -> u32 {
+    match n {
+        0 => 1,
+        1 => 1,
+        _ => fibonacci(n - 1) + fibonacci(n - 2),
+    }
+}
+#[wasm_bindgen]
+pub fn factorial(n: u32) -> u32 {
+    match n {
+        0 => 1,
+        _ => factorial(n - 1) * n,
+    }
+}
