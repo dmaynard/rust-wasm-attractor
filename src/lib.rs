@@ -39,7 +39,11 @@ macro_rules! console_log {
     // `bare_bones`
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
+
+
+
 #[wasm_bindgen]
+#[derive (Debug, Clone)]
 pub struct Rgba {
     r: u8,
     g: u8,
@@ -50,30 +54,48 @@ pub struct Rgba {
 pub struct AttractorObj {
     width: u32,
     height: u32,
-    data: Vec<Rgba>,
+    pixels: Vec<Rgba>,
+    data: u64,
     iters: u32,
+    x: f64,
+    y: f64,
 }   
+
+const abcd: [f64;4] =[-2.3983540752995394,
+ -1.8137134453341095,
+0.010788338377923257,
+1.0113015602664608];
+
+
 #[wasm_bindgen]
 impl AttractorObj {
     // ...
 
-    pub fn new(w: u32, h: u32) -> AttractorObj {
+    pub fn new(randomize: bool, w: u32, h: u32) -> AttractorObj {
         let width = w;
         let height = h;
         let iters: u32 = 0;
-        console_log!("Creating  AttractorObj {} x {} Life Universe ", w, h);
+        let mut x: f64 = 0.1;
+        let mut y: f64 = 0.1;
 
-        let data: Vec<Rgba> = (0..width * height)
+        console_log!("Creating  AttractorObj {} x {} Attractor Object ", w, h);
+
+        let pixels: Vec<Rgba> = (0..width * height)
             .map(|_i| {
-               Rgba{r: 0,  g: 200, b: 100, a:255}
+               Rgba{r:( _i  & 0xFF) as u8,  g: 200, b: 100, a:255}
             })
             .collect();    
-
+            console_log!(" data vector length = {}, first element = {:?}", pixels.len(), pixels[0]);
             AttractorObj {
             width,
             height,
-            data,
+            pixels, // reference to pgbs Ved
+            data: 0,    // set and used in es6 to point to pixel buffer within the wasm memory
+                    // new Uint8Array(this.wasmbg.memory.buffer, this.att.pixels(), this.width * this.height*4);
             iters,
+            x,
+            y,
+
             }
         }
         
@@ -89,9 +111,9 @@ impl AttractorObj {
         self.iters
     }
 
-    pub fn data(&self) -> *const Rgba {
+    pub fn pixels(&self) -> *const Rgba {
         // console_log!("Reference to {} x {} Life Universe ", self.width, self.height);
-        self.data.as_ptr()
+        self.pixels.as_ptr()
     }
      
 }
