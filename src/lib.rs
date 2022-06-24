@@ -54,11 +54,10 @@ pub struct Rgba {
 }
 
 #[wasm_bindgen]
-#[derive (Debug, Clone, Copy)]
-pub struct Point {
-    x: f64,
-    y: f64,
-}
+#[derive (Debug, Clone, Copy, PartialEq)]
+pub struct Point 
+   (f64, f64,);
+
 
 #[wasm_bindgen]
 pub struct AttractorObj {
@@ -92,15 +91,19 @@ impl Iterator for Generator {
     // We use Self::Item in the return type, so we can change
     // the type without having to update the function signatures.
     fn next(&mut self) -> Option<Self::Item> {
-        let new_point = Point {x: self.p.x,
-            y: self.p.y};
+        let old_point = self.p;
+        self.p = Point (
+            ((self.p.1 * self.b).sin() -
+             self.c * (self.p.0 * self.b).sin()),
+            ((self.p.0 * self.a).sin() +
+            self.d * (self.p.1 * self.a).cos()));
 
-        self.p = new_point;
+        
         
 
         // Since there's no endpoint to a Arrtactor sequence, the `Iterator` 
         // will never return `None`, and `Some` is always returned.
-        Some(self.p)
+        Some(old_point)
     }
 }
 #[wasm_bindgen]
@@ -122,7 +125,7 @@ impl AttractorObj {
             .collect();    
             console_log!(" data vector length = {}, first element = {:?}", pixels.len(), pixels[0]);
         if randomize {
-            seq = Generator {p: Point {x: 0.1, y: 0.1},
+            seq = Generator {p: Point (0.1, 0.1),
             a:  3.0 * (js_sys::Math::random() * 2.0 - 1.0),
             b:  3.0 * (js_sys::Math::random() * 2.0 - 1.0),
             c:  js_sys::Math::random() * 2.0 - 1.0 + 0.5,
@@ -131,8 +134,8 @@ impl AttractorObj {
         }
         else {
             seq = Generator {
-                p: Point {x: 0.1,
-                    y: 0.1},
+                p: Point ( 0.1,
+                     0.1),
                 a: -2.3983540752995394,
                 b: -1.8137134453341095,
                c: 0.010788338377923257,
@@ -187,4 +190,45 @@ pub fn triple (num: i32) -> i32 {
     console_log!("triple function returns {}", num+num+num);
     return num+num+num;
 }
+#[test]
+fn  test1 () {
+    let js_points: [Point; 10] = [
+        Point(0.1,0.1),
+        Point(-0.17843260803156397,0.7448124141417501),
+        Point (-0.9793456534060968,0.19872181239176576),
+        Point(-0.3632328562224842,1.6109032262161058),
+        Point(-0.2247127104379469,0.00605893484249198),
+        Point(-0.015265172289474743,1.5244218723046492),
+        Point(-0.3681787462683442,-0.8437688656557629),
+        Point(0.9925018189930358,0.3301774005806771),
+        Point(-0.5531847253681578,0.020639799299899786),
+        Point(-0.0465233064417923,1.9804268218281909),
+    ];
+    let mut seq = Generator {
+        p :Point (0.1,
+            0.1),
+        a: -2.3983540752995394,
+        b: -1.8137134453341095,
+       c: 0.010788338377923257,
+       d: 1.0113015602664608,
+}; 
+let mut index = 0;
 
+for i in seq.take(10) {
+    println!("> {:?} {:?}", i, js_points[index]);
+    //   sassert_eq!(i,js_points[index]);
+    assert! ((i.0-js_points[index].0).abs() < 0.00000000001);
+    assert! ((i.1-js_points[index].1).abs() < 0.00000000001);
+    index +=1;
+}
+for i in 0..js_points.len() {
+    println!("{:?}", js_points[i]);
+
+}
+
+
+
+println!(" Hello World " );
+    println!(" {:?} ", seq );
+    assert_eq!(0.0_f64.sin() , 0.0)
+}
