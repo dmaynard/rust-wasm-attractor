@@ -40,6 +40,8 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
+/// Public methods, exported to JavaScript.
+extern crate js_sys;
 
 
 #[wasm_bindgen]
@@ -48,8 +50,16 @@ pub struct Rgba {
     r: u8,
     g: u8,
     b: u8,
-    a: u8,
+    alpha: u8,
 }
+
+#[wasm_bindgen]
+#[derive (Debug, Clone, Copy)]
+pub struct Point {
+    x: f64,
+    y: f64,
+}
+
 #[wasm_bindgen]
 pub struct AttractorObj {
     width: u32,
@@ -57,16 +67,42 @@ pub struct AttractorObj {
     pixels: Vec<Rgba>,
     data: u64,
     iters: u32,
-    x: f64,
-    y: f64,
+    seq: Generator,
 }   
 
-const abcd: [f64;4] =[-2.3983540752995394,
- -1.8137134453341095,
-0.010788338377923257,
-1.0113015602664608];
+#[derive (Debug, Clone, Copy)]
+pub struct Generator {
+    p: Point,
+    a: f64,
+    b: f64,
+    c: f64,
+    d: f64,
+}
 
+// Implement `Iterator` for `Generator`.
+// The `Iterator` trait only requires a method to be defined for the `next` element.
+impl Iterator for Generator {
+    // We can refer to this type using Self::Item
+    type Item = Point;
+    
+    // Here, we define the sequence of point by iterating the attractor
+    // The return type is `Option<T>`:
+    //     * When the `Iterator` is finished, `None` is returned.
+    //     * Otherwise, the next value is wrapped in `Some` and returned.
+    // We use Self::Item in the return type, so we can change
+    // the type without having to update the function signatures.
+    fn next(&mut self) -> Option<Self::Item> {
+        let new_point = Point {x: self.p.x,
+            y: self.p.y};
 
+        self.p = new_point;
+        
+
+        // Since there's no endpoint to a Arrtactor sequence, the `Iterator` 
+        // will never return `None`, and `Some` is always returned.
+        Some(self.p)
+    }
+}
 #[wasm_bindgen]
 impl AttractorObj {
     // ...
@@ -74,27 +110,43 @@ impl AttractorObj {
     pub fn new(randomize: bool, w: u32, h: u32) -> AttractorObj {
         let width = w;
         let height = h;
-        let iters: u32 = 0;
-        let mut x: f64 = 0.1;
-        let mut y: f64 = 0.1;
+        let mut iters: u32 = 0;
+        let mut seq: Generator;
 
         console_log!("Creating  AttractorObj {} x {} Attractor Object ", w, h);
-
+        
         let pixels: Vec<Rgba> = (0..width * height)
             .map(|_i| {
-               Rgba{r:( _i  & 0xFF) as u8,  g: 200, b: 100, a:255}
+               Rgba{r:0,  g: 200, b: 100, alpha:255}
             })
             .collect();    
             console_log!(" data vector length = {}, first element = {:?}", pixels.len(), pixels[0]);
-            AttractorObj {
+        if randomize {
+            seq = Generator {p: Point {x: 0.1, y: 0.1},
+            a:  3.0 * (js_sys::Math::random() * 2.0 - 1.0),
+            b:  3.0 * (js_sys::Math::random() * 2.0 - 1.0),
+            c:  js_sys::Math::random() * 2.0 - 1.0 + 0.5,
+            d: js_sys::Math::random() * 2.0 - 1.0 + 0.5,
+            }
+        }
+        else {
+            seq = Generator {
+                p: Point {x: 0.1,
+                    y: 0.1},
+                a: -2.3983540752995394,
+                b: -1.8137134453341095,
+               c: 0.010788338377923257,
+               d: 1.0113015602664608};
+        }
+        
+        AttractorObj {
             width,
             height,
             pixels, // reference to pgbs Ved
             data: 0,    // set and used in es6 to point to pixel buffer within the wasm memory
                     // new Uint8Array(this.wasmbg.memory.buffer, this.att.pixels(), this.width * this.height*4);
             iters,
-            x,
-            y,
+            seq,
 
             }
         }
@@ -109,6 +161,10 @@ impl AttractorObj {
 
     pub fn iters(&self) -> u32 {
         self.iters
+    }
+
+    pub fn setIters(&mut self, n :u32)  {
+       self.iters = n;
     }
 
     pub fn pixels(&self) -> *const Rgba {
