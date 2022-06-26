@@ -1,4 +1,7 @@
 mod utils;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use wasm_bindgen::prelude::*;
 
 use wasm_bindgen::prelude::*;
 
@@ -45,7 +48,7 @@ extern crate js_sys;
 
 
 #[wasm_bindgen]
-#[derive (Debug, Clone)]
+#[derive (Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rgba {
     r: u8,
     g: u8,
@@ -53,6 +56,9 @@ pub struct Rgba {
     alpha: u8,
 }
 
+const WHITE: Rgba = Rgba {r:0xff, g:0xff, b: 0xff, alpha:0xff};
+const BLACK: Rgba = Rgba {r:0x00, g:0x00, b: 0x00, alpha:0xff};
+const ALMOST_BLack: Rgba = Rgba {r:0x01, g:0x01, b: 0x01, alpha:0xff};
 #[wasm_bindgen]
 #[derive (Debug, Clone, Copy, PartialEq)]
 pub struct Point 
@@ -66,6 +72,8 @@ pub struct AttractorObj {
     pixels: Vec<Rgba>,
     data: u64,
     iters: u32,
+    nTouched: u32,
+    nMaxed: u32,
     seq: Generator,
     xmin: f64,
     xmax: f64,
@@ -119,10 +127,16 @@ impl AttractorObj {
     pub fn new(randomize: bool, w: u32, h: u32) -> AttractorObj {
         let width = w;
         let height = h;
-        let mut iters: u32 = 0;
-        let mut seq: Generator;
+        let  iters: u32 = 0;
+        let seq: Generator;
+        let window = web_sys::window().expect("should have a window in this context");
+        let performance = window.performance()
+        .expect("performance should be available");
 
         console_log!("Creating  AttractorObj {} x {} Attractor Object ", w, h);
+        console_log!("the current time (in ms) is {}", performance.now());
+        
+
         
         let pixels: Vec<Rgba> = (0..width * height)
             .map(|_i| {
@@ -152,10 +166,12 @@ impl AttractorObj {
         AttractorObj {
             width,
             height,
-            pixels, // reference to pgbs Ved
+            pixels, // reference to rgbs Vec
             data: 0,    // set and used in es6 to point to pixel buffer within the wasm memory
                     // new Uint8Array(this.wasmbg.memory.buffer, this.att.pixels(), this.width * this.height*4);
             iters,
+            nMaxed: 0,
+            nTouched: 0,
             seq,
             xmin: 10.0,
             xmax: -10.0,
@@ -173,6 +189,14 @@ impl AttractorObj {
 
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    pub fn getnMaxed(&self) -> u32 {
+        self.nMaxed
+    }
+
+    pub fn getnTouched(&self) -> u32 {
+        self.nTouched
     }
 
     pub fn iters(&self) -> u32 {
@@ -202,6 +226,26 @@ impl AttractorObj {
         return py;
       }
      
+      fn dec_pixel (&mut self, x: u32, y: u32) {
+        let i: usize = (y * self.width + x) as usize;
+        
+        let mut temp = self.pixels[i];
+
+
+        match temp {
+            WHITE => {self.nTouched += 1},
+            ALMOST_BLACK => {self.nMaxed += 1},
+            BLACK => {},
+            _ => {temp = Rgba{
+                r: (temp.r -1 ),
+                g: (temp.g -1 ),
+                b: (temp.b -1 ),
+                alpha: 0xff
+                }
+            }
+        }
+        std::mem::replace(&mut self.pixels[i], temp);
+    }
 }
 #[wasm_bindgen]
 pub fn greet(name: &str) {
