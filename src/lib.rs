@@ -67,6 +67,12 @@ pub struct AttractorObj {
     data: u64,
     iters: u32,
     seq: Generator,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+    xRange: f64,
+    yRange: f64,
 }   
 
 #[derive (Debug, Clone, Copy)]
@@ -130,6 +136,7 @@ impl AttractorObj {
             b:  3.0 * (js_sys::Math::random() * 2.0 - 1.0),
             c:  js_sys::Math::random() * 2.0 - 1.0 + 0.5,
             d: js_sys::Math::random() * 2.0 - 1.0 + 0.5,
+           
             }
         }
         else {
@@ -150,6 +157,12 @@ impl AttractorObj {
                     // new Uint8Array(this.wasmbg.memory.buffer, this.att.pixels(), this.width * this.height*4);
             iters,
             seq,
+            xmin: 10.0,
+            xmax: -10.0,
+            ymin: 10.0,
+            ymax: -10.0,
+            xRange: 0.0,
+            yRange: 0.0,
 
             }
         }
@@ -166,7 +179,7 @@ impl AttractorObj {
         self.iters
     }
 
-    pub fn setIters(&mut self, n :u32)  {
+    pub fn set_iters(&mut self, n :u32)  {
        self.iters = n;
     }
 
@@ -174,6 +187,20 @@ impl AttractorObj {
         // console_log!("Reference to {} x {} Life Universe ", self.width, self.height);
         self.pixels.as_ptr()
     }
+
+    fn pixelx(&self, x: f64)-> u32 {
+        let mut px: u32 =(((x - self.xmin) / self.xRange) * f64::from(self.width)) as u32;
+        // if ((px < 0) || (px > this.width)) console.log(" bad x " + px + " " + x);
+        px = if px > self.width - 1 {self.width - 1  } else {px};    
+        return px;
+      }
+
+      fn pixely(&self, y: f64)-> u32 {
+        let mut py: u32 =(((y - self.ymin) / self.yRange) * f64::from(self.width)) as u32;
+        // if ((px < 0) || (px > this.width)) console.log(" bad x " + px + " " + x);
+        py = if py > self.height - 1 {self.height - 1  } else {py};    
+        return py;
+      }
      
 }
 #[wasm_bindgen]
@@ -204,7 +231,7 @@ fn  test1 () {
         Point(-0.5531847253681578,0.020639799299899786),
         Point(-0.0465233064417923,1.9804268218281909),
     ];
-    let mut seq = Generator {
+    let seq = Generator {
         p :Point (0.1,
             0.1),
         a: -2.3983540752995394,
@@ -217,8 +244,8 @@ let mut index = 0;
 for i in seq.take(10) {
     println!("> {:?} {:?}", i, js_points[index]);
     //   sassert_eq!(i,js_points[index]);
-    assert! ((i.0-js_points[index].0).abs() < 0.00000000001);
-    assert! ((i.1-js_points[index].1).abs() < 0.00000000001);
+    assert! ((i.0-js_points[index].0).abs() < 1.0E-10);
+    assert! ((i.1-js_points[index].1).abs() < 1.0E-10);
     index +=1;
 }
 for i in 0..js_points.len() {
