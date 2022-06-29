@@ -19,5 +19,8 @@
     "terminal.ansiBrightMagenta": "#ff6ac1",
     "terminal.ansiBrightCyan": "#9aedfe",
     "terminal.ansiBrightWhite": "#eff0eb"
-  }
+  },
+    "[rust]": {
+        "editor.formatOnSave": true // Optional
+    },
 }
