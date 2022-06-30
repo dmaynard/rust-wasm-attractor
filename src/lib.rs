@@ -1,7 +1,5 @@
 mod utils;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-use wasm_bindgen::prelude::*;
+// use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use wasm_bindgen::prelude::*;
 
@@ -55,24 +53,6 @@ pub struct Rgba {
     alpha: u8,
 }
 
-const WHITE: Rgba = Rgba {
-    r: 0xff,
-    g: 0xff,
-    b: 0xff,
-    alpha: 0xff,
-};
-const BLACK: Rgba = Rgba {
-    r: 0x00,
-    g: 0x00,
-    b: 0x00,
-    alpha: 0xff,
-};
-const ALMOST_BLACK: Rgba = Rgba {
-    r: 0x01,
-    g: 0x01,
-    b: 0x01,
-    alpha: 0xff,
-};
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point(f64, f64);
@@ -95,17 +75,8 @@ pub struct AttractorObj {
     xmax: f64,
     ymin: f64,
     ymax: f64,
-    xRange: f64,
-    yRange: f64,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Generator {
-    p: Point,
-    a: f64,
-    b: f64,
-    c: f64,
-    d: f64,
+    x_range: f64,
+    y_range: f64,
 }
 
 #[wasm_bindgen]
@@ -116,7 +87,6 @@ impl AttractorObj {
         let width = w;
         let height = h;
         let iters: u32 = 0;
-        let seq: Generator;
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
             .performance()
@@ -139,11 +109,11 @@ impl AttractorObj {
                 alpha: 255,
             })
             .collect();
-        console_log!(
-            " data vector length = {}, first element = {:?}",
-            pixels.len(),
-            pixels[0]
-        );
+        // console_log!(
+        //     " data vector length = {}, first element = {:?}",
+        //     pixels.len(),
+        //     pixels[0]
+        // );
         x = 0.1;
         y = 0.1;
         if randomize {
@@ -176,8 +146,8 @@ impl AttractorObj {
             b: b,
             c: c,
             d: d,
-            xRange: 0.0,
-            yRange: 0.0,
+            x_range: 0.0,
+            y_range: 0.0,
         }
     }
 
@@ -216,14 +186,14 @@ impl AttractorObj {
             .performance()
             .expect("performance should be available");
         let start_time = performance.now();
-        let mut msElapsed = 0;
-        let mut loop_count: i32 = 0;
+        let mut ms_elapsed = 0;
+        
         if first_frame {
-            let mut x = self.p.0;
-            let mut y = self.p.1;
+            let mut x;
+            let mut y;
 
             // calculate bounds if the attractor but don't plot anything
-            for i in 0..n_first_frame {
+            for _i in 0..n_first_frame {
                 x = self.p.0;
                 y = self.p.1;
                 if x < self.xmin {
@@ -238,28 +208,17 @@ impl AttractorObj {
                 if y > self.ymax {
                     self.ymax = y
                 };
-                if i < 10 {
-                    console_log!(" i {:?}, x: {} y: {}", i, x, y);
-                }
-                self.p = self.iteratePoint(x, y);
+                self.p = self.iterate_point(x, y);
             }
-            self.xRange = self.xmax - self.xmin;
-            self.yRange = self.ymax - self.ymin;
-
-            console_log!(
-                "xmin {}, xmax {} ymin {} ymax {}",
-                self.xmin,
-                self.xmax,
-                self.ymin,
-                self.ymax
-            );
+            self.x_range = self.xmax - self.xmin;
+            self.y_range = self.ymax - self.ymin;
             n_first_frame
         } else {
             // all successive frames()
-            let mut x = self.p.0;
-            let mut y = self.p.0;
-            loop_count = 0;
-            while (msElapsed < ms_budget) {
+            let mut loop_count: i32 = 0;
+            let mut x;
+            let mut y;
+            while ms_elapsed < ms_budget {
                 {
                     loop_count += 1;
 
@@ -267,24 +226,19 @@ impl AttractorObj {
                     y = self.p.1;
                     self.dec_pixel(self.pixelx(x), self.pixely(y));
 
-                    self.p = self.iteratePoint(x, y);
+                    self.p = self.iterate_point(x, y);
                     if (loop_count % 1024) == 0 {
-                        msElapsed = (performance.now() - start_time) as i32;
+                        ms_elapsed = (performance.now() - start_time) as i32;
                     }
                 }
             }
-            console_log!(
-                " loop_count {} nTouched {}, nMaxed {}",
-                loop_count,
-                self.nTouched,
-                self.nMaxed
-            );
+
             loop_count
         }
     }
 
     fn pixelx(&self, x: f64) -> u32 {
-        let mut px: u32 = (((x - self.xmin) / self.xRange) * f64::from(self.width)) as u32;
+        let mut px: u32 = (((x - self.xmin) / self.x_range) * f64::from(self.width)) as u32;
         // if ((px < 0) || (px > this.width)) console.log(" bad x " + px + " " + x);
         px = if px > self.width - 1 {
             self.width - 1
@@ -295,7 +249,7 @@ impl AttractorObj {
     }
 
     fn pixely(&self, y: f64) -> u32 {
-        let mut py: u32 = (((y - self.ymin) / self.yRange) * f64::from(self.height)) as u32;
+        let mut py: u32 = (((y - self.ymin) / self.y_range) * f64::from(self.height)) as u32;
         // if ((px < 0) || (px > this.width)) console.log(" bad x " + px + " " + x);
         py = if py > self.height - 1 {
             self.height - 1
@@ -307,12 +261,12 @@ impl AttractorObj {
     fn dec_pixel(&mut self, x: u32, y: u32) {
         let i: usize = (y * self.width + x) as usize;
 
-        let mut temp = self.pixels[i];
+        let temp = self.pixels[i];
         if temp.r == 255 {
             self.nTouched += 1;
         } else if temp.r == 1 {
             self.nMaxed += 1;
-        } else if (temp.r == 0) {
+        } else if temp.r == 0 {
             return;
         }
         self.pixels[i] = Rgba {
@@ -322,7 +276,7 @@ impl AttractorObj {
             alpha: 255,
         };
     }
-    fn iteratePoint(&self, x: f64, y: f64) -> Point {
+    fn iterate_point(&self, x: f64, y: f64) -> Point {
         Point(
             (y * self.b).sin() - self.c * (x * self.b).sin(),
             (x * self.a).sin() + self.d * (y * self.a).cos(),
