@@ -1,6 +1,7 @@
 mod utils;
-// use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+// use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use crate::utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -62,10 +63,9 @@ pub struct AttractorObj {
     width: u32,
     height: u32,
     pixels: Vec<Rgba>,
-    data: u64,
     iters: u32,
-    nTouched: u32,
-    nMaxed: u32,
+    n_touched: u32,
+    n_maxed: u32,
     p: Point,
     a: f64,
     b: f64,
@@ -83,7 +83,16 @@ pub struct AttractorObj {
 impl AttractorObj {
     // ...
 
-    pub fn new(randomize: bool, w: u32, h: u32) -> AttractorObj {
+    pub fn new(
+        w: u32,
+        h: u32,
+        px: f64,
+        py: f64,
+        pa: f64,
+        pb: f64,
+        pc: f64,
+        pd: f64,
+    ) -> AttractorObj {
         let width = w;
         let height = h;
         let iters: u32 = 0;
@@ -92,14 +101,10 @@ impl AttractorObj {
             .performance()
             .expect("performance should be available");
 
+        set_panic_hook();
+
         console_log!("Creating  AttractorObj {} x {} Attractor Object ", w, h);
         console_log!("the current time (in ms) is {}", performance.now());
-        let x: f64;
-        let y: f64;
-        let a: f64;
-        let b: f64;
-        let c: f64;
-        let d: f64;
         // move this to an unsafe static block to avoid allocation memory evey new
         let pixels: Vec<Rgba> = (0..width * height)
             .map(|_i| Rgba {
@@ -114,38 +119,23 @@ impl AttractorObj {
         //     pixels.len(),
         //     pixels[0]
         // );
-        x = 0.1;
-        y = 0.1;
-        if randomize {
-            a = 3.0 * (js_sys::Math::random() * 2.0 - 1.0);
-            b = 3.0 * (js_sys::Math::random() * 2.0 - 1.0);
-            c = js_sys::Math::random() * 2.0 - 1.0 + 0.5;
-            d = js_sys::Math::random() * 2.0 - 1.0 + 0.5;
-        } else {
-            a = -2.3983540752995394;
-            b = -1.8137134453341095;
-            c = 0.010788338377923257;
-            d = 1.0113015602664608;
-        }
 
         AttractorObj {
             width,
             height,
-            pixels,  // reference to rgbs Vec
-            data: 0, // set and used in es6 to point to pixel buffer within the wasm memory
-            // new Uint8Array(this.wasmbg.memory.buffer, this.att.pixels(), this.width * this.height*4);
+            pixels, // reference to rgbs Vec
             iters,
-            nMaxed: 0,
-            nTouched: 0,
+            n_maxed: 0,
+            n_touched: 0,
             xmin: 10.0,
             xmax: -10.0,
             ymin: 10.0,
             ymax: -10.0,
-            p: Point(x, y),
-            a: a,
-            b: b,
-            c: c,
-            d: d,
+            p: Point(px, py),
+            a: pa,
+            b: pb,
+            c: pc,
+            d: pd,
             x_range: 0.0,
             y_range: 0.0,
         }
@@ -159,12 +149,12 @@ impl AttractorObj {
         self.height
     }
 
-    pub fn getnMaxed(&self) -> u32 {
-        self.nMaxed
+    pub fn getn_maxed(&self) -> u32 {
+        self.n_maxed
     }
 
-    pub fn getnTouched(&self) -> u32 {
-        self.nTouched
+    pub fn getn_touched(&self) -> u32 {
+        self.n_touched
     }
 
     pub fn iters(&self) -> u32 {
@@ -180,18 +170,22 @@ impl AttractorObj {
         self.pixels.as_ptr()
     }
 
-    pub fn calculateFrame(&mut self, ms_budget: i32, first_frame: bool, n_first_frame: i32) -> i32 {
+    pub fn calculate_frame(
+        &mut self,
+        ms_budget: i32,
+        first_frame: bool,
+        n_first_frame: i32,
+    ) -> i32 {
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
             .performance()
             .expect("performance should be available");
         let start_time = performance.now();
         let mut ms_elapsed = 0;
-        
+
         if first_frame {
             let mut x;
             let mut y;
-
             // calculate bounds if the attractor but don't plot anything
             for _i in 0..n_first_frame {
                 x = self.p.0;
@@ -263,9 +257,9 @@ impl AttractorObj {
 
         let temp = self.pixels[i];
         if temp.r == 255 {
-            self.nTouched += 1;
+            self.n_touched += 1;
         } else if temp.r == 1 {
-            self.nMaxed += 1;
+            self.n_maxed += 1;
         } else if temp.r == 0 {
             return;
         }
@@ -282,6 +276,11 @@ impl AttractorObj {
             (x * self.a).sin() + self.d * (y * self.a).cos(),
         )
     }
+
+    pub fn free_pixels(&mut self) -> bool {
+        drop(&self.pixels);
+        true
+    }
 }
 
 #[wasm_bindgen]
@@ -295,7 +294,7 @@ pub fn double(num: i32) -> i32 {
 }
 #[wasm_bindgen]
 pub fn triple(num: i32) -> i32 {
-    console_log!("triple function returns {}", num + num + num);
+    console_log!("Rust says triple function returns {}", num + num + num);
     return num + num + num;
 }
 
