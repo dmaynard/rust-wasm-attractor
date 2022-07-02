@@ -5,6 +5,7 @@ authors = ["dmaynard <davidsmaynard@gmail.com>"]
 edition = "2021"
 description = "Chaotic Attractor Loop in Rust -> WASM -> Module" 
 repository ="git@github.com:dmaynard/rust-wasm-attractor.git"
+license="MIT"
 
 
 [lib]
