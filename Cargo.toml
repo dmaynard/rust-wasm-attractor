@@ -1,6 +1,6 @@
 [package]
 name = "rust-wasm-attractor"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["dmaynard <davidsmaynard@gmail.com>"]
 edition = "2021"
 description = "Chaotic Attractor Loop in Rust -> WASM -> Module" 
