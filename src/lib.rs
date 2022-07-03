@@ -96,15 +96,7 @@ impl AttractorObj {
         let width = w;
         let height = h;
         let iters: u32 = 0;
-        let window = web_sys::window().expect("should have a window in this context");
-        let performance = window
-            .performance()
-            .expect("performance should be available");
-
         set_panic_hook();
-
-        console_log!("Creating  AttractorObj {} x {} Attractor Object ", w, h);
-        console_log!("the current time (in ms) is {}", performance.now());
         // move this to an unsafe static block to avoid allocation memory evey new
         let pixels: Vec<Rgba> = (0..width * height)
             .map(|_i| Rgba {
@@ -232,41 +224,38 @@ impl AttractorObj {
     }
 
     fn pixelx(&self, x: f64) -> u32 {
-        let mut px: u32 = (((x - self.xmin) / self.x_range) * f64::from(self.width)) as u32;
-        // if ((px < 0) || (px > this.width)) console.log(" bad x " + px + " " + x);
-        px = if px > self.width - 1 {
+        let  px: u32 = (((x - self.xmin) / self.x_range) * f64::from(self.width)) as u32;
+        if px > self.width - 1 {
             self.width - 1
-        } else {
-            px
-        };
-        return px;
+        } else 
+            {px}
+        
     }
 
     fn pixely(&self, y: f64) -> u32 {
-        let mut py: u32 = (((y - self.ymin) / self.y_range) * f64::from(self.height)) as u32;
-        // if ((px < 0) || (px > this.width)) console.log(" bad x " + px + " " + x);
-        py = if py > self.height - 1 {
+        let py: u32 = (((y - self.ymin) / self.y_range) * f64::from(self.height)) as u32;
+      
+        if py > self.height - 1 {
             self.height - 1
         } else {
             py
-        };
-        return py;
+        }
     }
     fn dec_pixel(&mut self, x: u32, y: u32) {
         let i: usize = (y * self.width + x) as usize;
 
-        let temp = self.pixels[i];
-        if temp.r == 255 {
-            self.n_touched += 1;
-        } else if temp.r == 1 {
-            self.n_maxed += 1;
-        } else if temp.r == 0 {
-            return;
+        let prv: u8 = self.pixels[i].r;
+        match prv {
+            255 => self.n_touched += 1,
+            1 => self.n_maxed += 1,
+            0 => return,
+            _ => (),
         }
+
         self.pixels[i] = Rgba {
-            r: temp.r - 1,
-            g: temp.g - 1,
-            b: temp.b - 1,
+            r: prv - 1,
+            g: prv - 1,
+            b: prv - 1,
             alpha: 255,
         };
     }
@@ -281,93 +270,4 @@ impl AttractorObj {
         drop(&self.pixels);
         true
     }
-}
-
-#[wasm_bindgen]
-pub fn greet(name: &str) {
-    alert(&format!("Hello Rust , {} ", name));
-}
-
-#[wasm_bindgen]
-pub fn double(num: i32) -> i32 {
-    return num + num;
-}
-#[wasm_bindgen]
-pub fn triple(num: i32) -> i32 {
-    console_log!("Rust says triple function returns {}", num + num + num);
-    return num + num + num;
-}
-
-#[test]
-fn test1() {
-    let js_points: [Point; 10] = [
-        Point(0.1, 0.1),
-        Point(-0.17843260803156397, 0.7448124141417501),
-        Point(-0.9793456534060968, 0.19872181239176576),
-        Point(-0.3632328562224842, 1.6109032262161058),
-        Point(-0.2247127104379469, 0.00605893484249198),
-        Point(-0.015265172289474743, 1.5244218723046492),
-        Point(-0.3681787462683442, -0.8437688656557629),
-        Point(0.9925018189930358, 0.3301774005806771),
-        Point(-0.5531847253681578, 0.020639799299899786),
-        Point(-0.0465233064417923, 1.9804268218281909),
-    ];
-    let seq = Generator {
-        p: Point(0.1, 0.1),
-        a: -2.3983540752995394,
-        b: -1.8137134453341095,
-        c: 0.010788338377923257,
-        d: 1.0113015602664608,
-    };
-    let mut index = 0;
-
-    for i in seq.take(10) {
-        println!("> {:?} {:?}", i, js_points[index]);
-        //   sassert_eq!(i,js_points[index]);
-        assert!((i.0 - js_points[index].0).abs() < 1.0E-10);
-        assert!((i.1 - js_points[index].1).abs() < 1.0E-10);
-        index += 1;
-    }
-    for i in 0..js_points.len() {
-        println!("{:?}", js_points[i]);
-    }
-
-    println!(" Hello World ");
-    println!(" {:?} ", seq);
-    assert_eq!(0.0_f64.sin(), 0.0)
-}
-#[test]
-fn test_bounds() {
-    let seq = Generator {
-        p: Point(0.1, 0.1),
-        a: -2.3983540752995394,
-        b: -1.8137134453341095,
-        c: 0.010788338377923257,
-        d: 1.0113015602664608,
-    };
-
-    let mut xmin = 1.0E10;
-    let mut xmax = -1.0E10;
-    let mut ymin = 1.0E10;
-    let mut ymax = -1.0E10;
-
-    for xy in seq.take(10000 as usize) {
-        let Point(x, y) = xy;
-        if x < xmin {
-            xmin = x
-        };
-        if x > xmax {
-            xmax = x
-        };
-        if y < ymin {
-            ymin = y
-        };
-        if y > ymax {
-            ymax = y
-        };
-    }
-    assert!((xmin - -1.010769171380747).abs() < 1.0E-3);
-    assert!((xmax - 1.010723115987805).abs() < 1.0E-3);
-    assert!((ymin - -2.0112973084247994).abs() < 1.0E-3);
-    assert!((ymax - 2.0110038969879342).abs() < 1.0E-3);
 }
